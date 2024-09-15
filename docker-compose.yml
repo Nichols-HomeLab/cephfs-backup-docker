@@ -1,0 +1,13 @@
+services:
+  cephfs-snapshot:
+    image: my-cephfs-snapshot-container
+    container_name: cephfs-snapshot
+    environment:
+      - CEPHFS_MOUNT=/mnt/cephfs
+      - SNAPSHOT_DIR=/mnt/cephfs/.snap
+      - MAX_SNAPSHOTS=7
+      - REMOTE_DIR=/mnt/unraid/Backup/cephfs
+    volumes:
+      - /mnt/cephfs:/mnt/cephfs  # CephFS mount on the host
+      - /mnt/unraid:/mnt/unraid  # Unraid or backup destination on the host
+    restart: unless-stopped
