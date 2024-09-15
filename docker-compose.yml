@@ -1,7 +1,7 @@
 services:
   cephfs-snapshot:
-    image: my-cephfs-snapshot-container
-    container_name: cephfs-snapshot
+    image: blackops010/cephfs-snapshot-docker
+    container_name: cephfs-snapshot-docker
     environment:
       - CEPHFS_MOUNT=/mnt/cephfs
       - SNAPSHOT_DIR=/mnt/cephfs/.snap
