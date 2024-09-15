@@ -1,19 +1,21 @@
 #!/bin/bash
 
-# Configuration
-CEPHFS_MOUNT="/mnt/cephfs"
-SNAPSHOT_DIR="$CEPHFS_MOUNT/.snap"
-LOG_FILE="/mnt/cephfs/cephfs_snapshot.log"
-MAX_SNAPSHOTS=7  # Keep a week's worth of snapshots
-REMOTE_DIR="/mnt/unraid/Backup/cephfs/"
-REMOTE_LOG_FILE="$REMOTE_DIR/cephfs_snapshot_$(date +%Y%m%d).log"
-
-# Function to log messages
+# Logging function
 log_message() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOG_FILE"
 }
 
-# Function to copy snapshot to remote dir
+# Load environment variables with defaults
+CEPHFS_MOUNT="${CEPHFS_MOUNT:-/mnt/cephfs}"
+SNAPSHOT_DIR="${SNAPSHOT_DIR:-$CEPHFS_MOUNT/.snap}"
+LOG_FILE="${LOG_FILE:-$CEPHFS_MOUNT/cephfs_snapshot.log}"
+MAX_SNAPSHOTS="${MAX_SNAPSHOTS:-7}"
+REMOTE_DIR="${REMOTE_DIR:-/mnt/unraid/Backup/cephfs/}"
+REMOTE_LOG_FILE="$REMOTE_DIR/cephfs_snapshot_$(date +%Y%m%d).log"
+
+log_message "Script execution started."
+
+# Function to copy snapshot to the remote directory
 copy_snapshot_to_remote() {
     SNAPSHOT_PATH="$SNAPSHOT_DIR/$SNAPSHOT_NAME"
     if cp -r "$SNAPSHOT_PATH" "$REMOTE_DIR"; then
@@ -23,7 +25,7 @@ copy_snapshot_to_remote() {
     fi
 }
 
-# Function to copy log to remote dir
+# Function to copy log to the remote directory
 copy_log_to_remote() {
     if cp "$LOG_FILE" "$REMOTE_LOG_FILE"; then
         log_message "Log copied to remote: $REMOTE_LOG_FILE"
@@ -32,22 +34,26 @@ copy_log_to_remote() {
     fi
 }
 
-# Ensure remote directory exists
+# Check if the remote directory exists, if not, create it
+log_message "Checking if remote directory exists."
 if [ ! -d "$REMOTE_DIR" ]; then
     mkdir -p "$REMOTE_DIR"
     if [ $? -ne 0 ]; then
         log_message "Error: Failed to create remote directory $REMOTE_DIR"
         exit 1
     fi
+    log_message "Created remote directory: $REMOTE_DIR"
 fi
 
 # Check if CephFS is mounted
+log_message "Checking if CephFS is mounted at $CEPHFS_MOUNT."
 if ! mountpoint -q "$CEPHFS_MOUNT"; then
     log_message "Error: CephFS is not mounted at $CEPHFS_MOUNT"
     exit 1
 fi
 
 # Create a unique snapshot name
+log_message "Creating a unique snapshot name."
 SNAPSHOT_NAME=$(date +%Y%m%d-%Hh%M)
 COUNTER=1
 while [ -d "$SNAPSHOT_DIR/$SNAPSHOT_NAME" ]; do
@@ -55,6 +61,8 @@ while [ -d "$SNAPSHOT_DIR/$SNAPSHOT_NAME" ]; do
     COUNTER=$((COUNTER + 1))
 done
 
+# Create snapshot directory
+log_message "Creating snapshot directory: $SNAPSHOT_NAME"
 if mkdir "$SNAPSHOT_DIR/$SNAPSHOT_NAME"; then
     log_message "Snapshot created: $SNAPSHOT_NAME"
 else
@@ -69,9 +77,11 @@ copy_snapshot_to_remote
 copy_log_to_remote
 
 # List all snapshots and sort them
+log_message "Listing all snapshots in $SNAPSHOT_DIR."
 SNAPSHOTS=($(ls -1 "$SNAPSHOT_DIR" | sort))
 
 # Remove old snapshots if we have more than MAX_SNAPSHOTS
+log_message "Checking if any snapshots need to be removed."
 while [ ${#SNAPSHOTS[@]} -gt $MAX_SNAPSHOTS ]; do
     OLDEST=${SNAPSHOTS[0]}
     if rmdir "$SNAPSHOT_DIR/$OLDEST"; then
@@ -82,4 +92,4 @@ while [ ${#SNAPSHOTS[@]} -gt $MAX_SNAPSHOTS ]; do
     SNAPSHOTS=(${SNAPSHOTS[@]:1})  # Remove the first element from the array
 done
 
-log_message "Snapshot process completed successfully"
+log_message "Snapshot process completed successfully."
