@@ -1,12 +1,26 @@
 services:
   cephfs-snapshot:
-    image: blackops010/cephfs-snapshot-docker
+    build:  # Add build context
+      context: .  # Current directory
+      dockerfile: Dockerfile  # Specify the Dockerfile to use (default is Dockerfile)
+    image: cephfs-snapshot-docker:latest
     container_name: cephfs-snapshot-docker
     environment:
       - CEPHFS_MOUNT=/mnt/cephfs
       - SNAPSHOT_DIR=/mnt/cephfs/.snap
       - MAX_SNAPSHOTS=7
       - REMOTE_DIR=/mnt/unraid/Backup/cephfs
+      - CRON_SCHEDULE=0 3 * * *
+      - SMTP_SERVER=192.168.68.113
+      - SMTP_PORT=25
+      - SMTP_USER=admin
+      - SMTP_PASSWORD=bulletx2
+      - SMTP_FROM=docker@ntfy.local.lan
+      - SMTP_RECIPIENT=ntfy-cephfs@local.lan
+      - SMTP_TLS=off  # No encryption
+      - SMTP_TLS_VERIFY=off  # Skip verification for no encryption
+      - TEST_NOTIFICATION=true  # Set to 'true' to send a test notification
+      - LOG_LEVEL=debug
     volumes:
       - /mnt/cephfs:/mnt/cephfs  # CephFS mount on the host
       - /mnt/unraid:/mnt/unraid  # Unraid or backup destination on the host

@@ -1,0 +1,27 @@
+image: docker:latest
+
+pipelines:
+  default:
+    - name: Build and push Docker image
+      steps:
+        - name: Build Docker image
+          image: plugins/docker
+          settings:
+            repo: blackops010/cephfs-backup
+            tags:
+              - latest
+            username:
+              from_secret: DOCKER_USERNAME
+            password:
+              from_secret: DOCKER_PASSWORD
+
+        - name: Push to self-hosted Gitea
+          image: plugins/docker
+          settings:
+            repo: gitea.nicholstech.org/david/cephfs-backup
+            tags:
+              - latest  
+            username:
+              from_secret: GITEA_USERNAME
+            password:
+              from_secret: GITEA_PASSWORD

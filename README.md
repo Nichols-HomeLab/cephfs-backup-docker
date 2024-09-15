@@ -82,7 +82,9 @@ You can build the Docker image locally using the source code from this repositor
 #### 1. Build the Docker Image
 
 To build the Docker image, run the following command from the directory containing the `Dockerfile` and `cephfs-snapshot.sh`:
-
+```bash
+docker build -t cephfs-snapshot-docker:latest .
+```
 #### 2. Run the Docker Container
 You can run the container with default values by running the following command:
 
