@@ -9,7 +9,7 @@ pipelines:
           settings:
             repo: blackops010/cephfs-backup
             tags:
-              - latest
+              - testing
             username:
               from_secret: DOCKER_USERNAME
             password:
@@ -20,7 +20,7 @@ pipelines:
           settings:
             repo: gitea.nicholstech.org/david/cephfs-backup
             tags:
-              - latest  
+              - testing  
             username:
               from_secret: GITEA_USERNAME
             password:
