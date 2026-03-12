@@ -1,11 +1,13 @@
 # CephFS Snapshot Docker Container
 
-This Docker container creates snapshots of your CephFS mount and backs them up to a remote directory. It also handles log file management and keeps a fixed number of snapshots based on environment variables.
+This Docker container creates snapshots of your CephFS mount and backs them up to a remote directory. It also handles log file management and supports both simple max-count retention or time-based retention (hourly/daily/monthly/yearly).
 
 ## Features
 - Snapshot creation for CephFS mount points.
 - Customizable backup and logging directories.
-- Automatic old snapshot removal after exceeding a defined threshold.
+- Automatic old snapshot removal after exceeding a defined threshold or by time-based retention.
+- Remote backup copies preserve contents and symlinks without attempting to preserve owner/group metadata on the destination.
+- Optional ntfy notifications for success and failure.
 
 ## Environment Variables
 The following environment variables can be set to customize the behavior of the container:
@@ -13,8 +15,18 @@ The following environment variables can be set to customize the behavior of the 
 - `CEPHFS_MOUNT` (default: `/mnt/cephfs`): The mount point of the CephFS filesystem.
 - `SNAPSHOT_DIR` (default: `/$CEPHFS_MOUNT/.snap`): Directory where snapshots will be stored.
 - `LOG_FILE` (default: `$CEPHFS_MOUNT/cephfs_snapshot.log`): Path to the log file.
-- `MAX_SNAPSHOTS` (default: `7`): The maximum number of snapshots to keep.
-- `REMOTE_DIR` (default: `/mnt/unraid/Backup/cephfs/`): Remote directory where snapshots and logs will be copied.
+- `MAX_SNAPSHOTS` (default: `7`): The maximum number of snapshots to keep (used only if no time-based retention variables are set).
+- `REMOTE_DIR` (default: `/mnt/unraid/Backup/cephfs/`): Remote directory where snapshots and logs will be copied. Daily backups are stored in `REMOTE_DIR/YYYY-MM-DD/` and contain the snapshot contents (no extra nested snapshot directory).
+- `RETENTION_HOURLY` (default: unset): Keep the most recent N hourly snapshots (one per hour).
+- `RETENTION_DAILY` (default: unset): Keep the most recent N daily snapshots (one per day).
+- `RETENTION_MONTHLY` (default: unset): Keep the most recent N monthly snapshots (one per month).
+- `RETENTION_YEARLY` (default: unset): Keep the most recent N yearly snapshots (one per year).
+- `NTFY_URL` (default: unset): Base URL for ntfy (e.g. `https://ntfy.sh`).
+- `NTFY_TOPIC` (default: unset): ntfy topic name to publish to.
+- `BACKUP_SCHEDULE` (default: unset): Set to `daily` to run continuously and take one snapshot per day at `DAILY_TIME`.
+- `DAILY_TIME` (default: `00:00`): Time of day for daily backups (24h `HH:MM`).
+
+If any of the `RETENTION_*` values are set, time-based retention is used and `MAX_SNAPSHOTS` is ignored. Retention keeps the newest snapshot per hour/day/month/year up to the specified counts (e.g., `RETENTION_DAILY=30` and `RETENTION_MONTHLY=12` keeps the last 30 days and one per month for 12 months). The same retention policy is also applied to the remote `REMOTE_DIR` daily folders.
 
 ## Build and Run Instructions
 
@@ -56,7 +68,12 @@ services:
     environment:
       - CEPHFS_MOUNT=/mnt/cephfs
       - SNAPSHOT_DIR=/mnt/cephfs/.snap
-      - MAX_SNAPSHOTS=7
+      - RETENTION_DAILY=30
+      - RETENTION_MONTHLY=12
+      - BACKUP_SCHEDULE=daily
+      - DAILY_TIME=00:00
+      - NTFY_URL=https://ntfy.sh
+      - NTFY_TOPIC=backup
       - REMOTE_DIR=/mnt/unraid/Backup/cephfs
     volumes:
       - /mnt/cephfs:/mnt/cephfs  # CephFS mount on the host
@@ -100,7 +117,12 @@ docker run --name cephfs-snapshot \
     -v /mnt/cephfs:/mnt/cephfs \
     -e CEPHFS_MOUNT=/custom/cephfs_mount \
     -e SNAPSHOT_DIR=/custom/cephfs_mount/.snap \
-    -e MAX_SNAPSHOTS=5 \
+    -e RETENTION_DAILY=30 \
+    -e RETENTION_MONTHLY=12 \
+    -e BACKUP_SCHEDULE=daily \
+    -e DAILY_TIME=00:00 \
+    -e NTFY_URL=https://ntfy.sh \
+    -e NTFY_TOPIC=cephfs-backups \
     -e REMOTE_DIR=/mnt/unraid/custom_backup \
     cephfs-snapshot-docker
 ```

@@ -5,8 +5,13 @@ services:
     environment:
       - CEPHFS_MOUNT=/mnt/cephfs
       - SNAPSHOT_DIR=/mnt/cephfs/.snap
-      - MAX_SNAPSHOTS=7
+      - RETENTION_DAILY=30
+      - RETENTION_MONTHLY=12
+      - BACKUP_SCHEDULE=daily
+      - DAILY_TIME=00:00
       - REMOTE_DIR=/mnt/unraid/Backup/cephfs
+      - NTFY_URL=http://ntfy:80
+      - NTFY_TOPIC=backup
     volumes:
       - /mnt/cephfs:/mnt/cephfs  # CephFS mount on the host
       - /mnt/unraid:/mnt/unraid  # Unraid or backup destination on the host
