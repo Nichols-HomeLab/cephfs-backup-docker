@@ -1,6 +1,7 @@
 services:
   cephfs-snapshot:
-    image: blackops010/cephfs-snapshot-docker
+    build: .
+    image: cephfs-backup-docker:local
     container_name: cephfs-snapshot-docker
     environment:
       - CEPHFS_MOUNT=/mnt/cephfs
@@ -9,10 +10,45 @@ services:
       - RETENTION_MONTHLY=12
       - BACKUP_SCHEDULE=daily
       - DAILY_TIME=00:00
-      - REMOTE_DIR=/mnt/unraid/Backup/cephfs
+      - REMOTE_DIR=/backup/Lab/cephfs
       - NTFY_URL=http://ntfy:80
       - NTFY_TOPIC=backup
     volumes:
       - /mnt/cephfs:/mnt/cephfs  # CephFS mount on the host
-      - /mnt/unraid:/mnt/unraid  # Unraid or backup destination on the host
+      - unraid-backup:/backup
     restart: unless-stopped
+
+  rbd-backup:
+    build: .
+    image: cephfs-backup-docker:local
+    container_name: rbd-backup-docker
+    entrypoint: ["/usr/local/bin/rbd-backup.sh"]
+    environment:
+      - RBD_POOL=rbd
+      - RBD_CEPH_ID=docker
+      - RBD_KEYRING=/etc/ceph/ceph.client.docker.keyring
+      - RBD_CONF=/etc/ceph/ceph.conf
+      - RBD_EXPORT_ROOT=/backup/Lab/rbd
+      - RBD_RETENTION_DAILY=30
+      - RBD_RETENTION_MONTHLY=12
+      - RBD_RETENTION_DAILY_DIFFS=30
+      - RBD_RETENTION_WEEKLY_FULLS=8
+      - RBD_RETENTION_MONTHLY_FULLS=12
+      - RBD_WEEKLY_FULL_DAY=7
+      - RBD_MONTHLY_FULL_DAY=1
+      - BACKUP_SCHEDULE=daily
+      - DAILY_TIME=01:00
+      - NTFY_URL=http://ntfy:80
+      - NTFY_TOPIC=backup
+    volumes:
+      - /etc/ceph:/etc/ceph:ro
+      - unraid-backup:/backup
+    restart: unless-stopped
+
+volumes:
+  unraid-backup:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=10.0.30.116,rw,nfsvers=4.2,proto=tcp,hard,timeo=600,retrans=2
+      device: :/mnt/user/Backup

@@ -1,8 +1,17 @@
-# Use a lightweight base image
-FROM alpine:latest
+# Use Debian so the official Ceph CLI packages are available.
+FROM debian:bookworm-slim
 
-# Install necessary packages for CephFS
-RUN apk add --no-cache bash sudo curl
+# Install packages needed by the CephFS and RBD backup scripts.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        bash \
+        ca-certificates \
+        ceph-common \
+        coreutils \
+        curl \
+        jq \
+        util-linux \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set default environment variables
 ENV CEPHFS_MOUNT="/mnt/cephfs"
@@ -21,9 +30,10 @@ ENV DAILY_TIME="00:00"
 
 # Copy the snapshot script
 COPY cephfs-snapshot.sh /usr/local/bin/cephfs-snapshot.sh
+COPY rbd-backup.sh /usr/local/bin/rbd-backup.sh
 
 # Ensure the script is executable
-RUN chmod +x /usr/local/bin/cephfs-snapshot.sh
+RUN chmod +x /usr/local/bin/cephfs-snapshot.sh /usr/local/bin/rbd-backup.sh
 
 # Set the default command to run the script
 ENTRYPOINT ["/usr/local/bin/cephfs-snapshot.sh"]
